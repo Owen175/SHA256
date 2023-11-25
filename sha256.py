@@ -1,7 +1,11 @@
+from hashlib import sha256
+
 class SHA256:
     def __init__(self, entry):
-        self.hash_values = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab,
-                            0x5be0cd19]
+        self.hash_values = ['01101010000010011110011001100111', '10111011011001111010111010000101',
+                            '00111100011011101111001101110010', '10100101010011111111010100111010',
+                            '01010001000011100101001001111111', '10011011000001010110100010001100',
+                            '00011111100000111101100110101011', '01011011111000001100110100011001']
         self.k_values = [
             0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
             0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -15,7 +19,7 @@ class SHA256:
         self.hashed = self.process(entry)
 
     def alpha_to_binary(self, entry):
-        return ''.join(format(ord(x), 'b') for x in entry)
+        return ''.join(bin(ord(x))[2:].zfill(8) for x in entry)
 
     def pre_processing_padding(self, binary_entry):
         original_length = len(binary_entry)
@@ -128,14 +132,6 @@ class SHA256:
         for blk in split_blocks:
             w_values = self.get_w_values(blk)
             a, b, c, d, e, f, g, h = self.hash_values
-            a = bin(a)[2:].zfill(32)
-            b = bin(b)[2:].zfill(32)
-            c = bin(c)[2:].zfill(32)
-            d = bin(d)[2:].zfill(32)
-            e = bin(e)[2:].zfill(32)
-            f = bin(f)[2:].zfill(32)
-            g = bin(g)[2:].zfill(32)
-            h = bin(h)[2:].zfill(32)
 
             for i in range(64):
                 T1 = bin(int(h, 2) + int(self.SIGMA_one(e), 2) + int(self.Ch(e, f, g), 2) + self.k_values[i] + int(w_values[i], 2))[2:]
@@ -143,19 +139,41 @@ class SHA256:
                 if len(T1) < 32:
                     T1 = T1.zfill(32)
                 elif len(T1) > 32:
-                    T1 = T1[:32]
+                    T1 = T1[-32:]
                 if len(T2) < 32:
                     T2 = T2.zfill(32)
                 elif len(T2) > 32:
-                    T2 = T2[:32]
+                    T2 = T2[-32:]
                 h = g
                 g = f
                 f = e
-                e = d + T1
+                e = bin(int(d, 2) + int(T1, 2))[2:]
+                if len(e) > 32:
+                    e = e[-32:]
+                elif len(e) < 32:
+                    e = e.zfill(32)
                 d = c
                 c = b
                 b = a
-                a = T1 + T2
+                a = bin(int(T1, 2) + int(T2, 2))[2:]
+                if len(a) > 32:
+                    a = a[-32:]
+                elif len(a) < 32:
+                    a = a.zfill(32)
+
+            for i, letter in enumerate([a, b, c, d, e, f, g, h]):
+                temp_letter = bin(int(self.hash_values[i], 2) + int(letter, 2))[2:]
+                if len(temp_letter) > 32:
+                    temp_letter = temp_letter[-32:]
+                elif len(temp_letter) < 32:
+                    temp_letter = temp_letter.zfill(32)
+                self.hash_values[i] = temp_letter
+        output = ''
+
+        for h in self.hash_values:
+            output += h
+        return output
 
 
-SHA256('RedBlockBlue')
+sha = SHA256('RedBlockBlue')
+print(hex(int(sha.hashed, 2))[2:])
