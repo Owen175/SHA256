@@ -1,4 +1,22 @@
+import random
+
 class SHA256:
+    def __init__(self):
+        self.__hash_values = ['01101010000010011110011001100111', '10111011011001111010111010000101',
+                            '00111100011011101111001101110010', '10100101010011111111010100111010',
+                            '01010001000011100101001001111111', '10011011000001010110100010001100',
+                            '00011111100000111101100110101011', '01011011111000001100110100011001']
+        self.__k_values = [
+            0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+            0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+            0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+            0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+            0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+            0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+            0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+            0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2]
+        self.__pepper = '1001100010000011100000000110111111111101101001111010010111011100011011001001110111111111000101011010100000100010111111101111110110000101000010111101001010010011001001000001011110010000111010011111011011100010000001011110001011010101111100001111011010000110'
+        
     def alpha_to_binary(self, entry):
         return ''.join(bin(ord(x))[2:].zfill(8) for x in entry)
 
@@ -99,22 +117,15 @@ class SHA256:
                 output += '0'
         return output
 
-    def process(self, entry, outputMode='bin'):
-        self.hash_values = ['01101010000010011110011001100111', '10111011011001111010111010000101',
-                            '00111100011011101111001101110010', '10100101010011111111010100111010',
-                            '01010001000011100101001001111111', '10011011000001010110100010001100',
-                            '00011111100000111101100110101011', '01011011111000001100110100011001']
-        self.k_values = [
-            0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
-            0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
-            0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
-            0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
-            0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
-            0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
-            0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
-            0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2]
-
+    def process(self, entry, outputMode='bin', salt=False, pepper=False):
         binary_entry = self.alpha_to_binary(entry)
+        if pepper:
+            binary_entry += self.__pepper
+        if salt:
+            salt = ''
+            for _ in range(256):
+                salt += str(random.randint(0,1))
+            binary_entry += salt
         padded_binary_entry, n_blocks = self.pre_processing_padding(binary_entry)
         blocks = [padded_binary_entry[i * 512:(i + 1) * 512] for i in range(n_blocks)]
         split_blocks = []
@@ -125,10 +136,10 @@ class SHA256:
 
         for blk in split_blocks:
             w_values = self.get_w_values(blk)
-            a, b, c, d, e, f, g, h = self.hash_values
+            a, b, c, d, e, f, g, h = self.__hash_values
 
             for i in range(64):
-                T1 = bin(int(h, 2) + int(self.SIGMA_one(e), 2) + int(self.Ch(e, f, g), 2) + self.k_values[i] + int(
+                T1 = bin(int(h, 2) + int(self.SIGMA_one(e), 2) + int(self.Ch(e, f, g), 2) + self.__k_values[i] + int(
                     w_values[i], 2))[2:]
                 T2 = bin(int(self.SIGMA_zero(a), 2) + int(self.Maj(a, b, c), 2))[2:]
                 if len(T1) < 32:
@@ -157,19 +168,24 @@ class SHA256:
                     a = a.zfill(32)
 
             for i, letter in enumerate([a, b, c, d, e, f, g, h]):
-                temp_letter = bin(int(self.hash_values[i], 2) + int(letter, 2))[2:]
+                temp_letter = bin(int(self.__hash_values[i], 2) + int(letter, 2))[2:]
                 if len(temp_letter) > 32:
                     temp_letter = temp_letter[-32:]
                 elif len(temp_letter) < 32:
                     temp_letter = temp_letter.zfill(32)
-                self.hash_values[i] = temp_letter
+                self.__hash_values[i] = temp_letter
         output = ''
 
-        for h in self.hash_values:
+        for h in self.__hash_values:
             output += h
         if outputMode == 'hex':
+            if salt:
+                return hex(int(output, 2))[2:], salt
             return hex(int(output, 2))[2:]
         else:
+            if salt:
+                return output, salt
             return output
-
-
+sha=SHA256()
+_hash, salt = sha.process('', salt=True, pepper=True, outputMode='hex')
+print(_hash)
